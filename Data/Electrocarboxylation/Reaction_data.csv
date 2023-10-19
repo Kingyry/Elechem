@@ -1,0 +1,2 @@
+,Reagent SMILES,Functional,Basis,Solvent,"Reagent G, eV",Product SMILES,"Product G, eV",Type,"Free energy, eV"
+0,OCO,B3LYP,MA-DEF2-TZVPP,acetonitrile,-5132.0,OCO,-5134.41,adiab.,-2.4099999999998545
