@@ -1,6 +1,13 @@
-,Reagent SMILES,Functional,Basis,Solvent,"Reagent G, eV",Product SMILES,"Product G, eV",Type,"Free energy, eV","Reduction potential, V vs. Fc/Fc+","λ (inner.), eV","λ (solv.), eV","λ (tot.), eV","Dp, eV","λ (sticky.), eV","Z, cm/s","k0, cm/s","k0 (sticky), cm/s","D (theor.), cm2/s"
-0,OC1CCC(O)CC1,B3LYP,DEF2-TZVPP,acetonitrile,-10377.8,OC1CCC(O)CC1,-10381.83,adiab.,-4.030000000000655,-1.06999999999789,NaN,0.32,NaN,NaN,NaN,6041.43,NaN,NaN,1.0589016324285648e-05
-1,OC(C1CCCCC1)C1CCCCC1,B3LYP,DEF2-TZVPP,acetonitrile,-15684.79,OC(C1CCCCC1)C1CCCCC1,-15687.33,adiab.,-2.539999999999054,-2.5599999999994907,NaN,0.26,NaN,NaN,NaN,4653.12,NaN,NaN,8.808256784443143e-06
-2,C1CCC(NNC2CCCCC2)CC1,B3LYP,DEF2-TZVPP,acetonitrile,-15579.21,C1CCC(NNC2CCCCC2)CC1,-15582.27,adiab.,-3.0600000000013097,-2.039999999997235,NaN,0.26,NaN,NaN,NaN,4653.07,NaN,NaN,8.776589583748602e-06
-3,OC1CCC(O)CC1,B3LYP,DEF2-TZVPP,acetonitrile,-10377.8,OC1CCC(O)CC1,-10384.48,adiab.,-6.680000000000291,-1.7599999999983993,NaN,0.32,NaN,NaN,NaN,6041.43,NaN,NaN,1.0589016324285648e-05
-4,C1CCC2CC3CCCCC3CC2C1,B3LYP,DEF2-TZVPP,acetonitrile,-14674.65,C1CCC2CC3CCCCC3CC2C1,-14669.4,adiab.,5.25,0.1500000000014552,NaN,0.26,NaN,NaN,NaN,4704.89,NaN,NaN,8.828077400503535e-06
+,Reagent SMILES,Reagent multiplicity,Reagent charge,"Reagent energy, eV",Product SMILES,Product multiplicity,Product charge,"Product energy, eV",Functional,Basis,Solvent,Reaction,Type,Mechanism,"Free energy, eV"
+0,NCC(CN)C1CCC(C(CN)CN)CC1,1,0,-18461.09,NCC(CN)C1CCC(C(CN)CN)CC1[*1-],2,-1,-18465.9,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-4.81
+1,C1CCC2SC3CCCCC3SC2C1[2+],1,2,-34226.76,C1CCC2SC3CCCCC3SC2C1[1+],2,1,-34232.99,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-6.23
+2,OC1CCC(O)CC1[*1-],2,-1,-10381.95,OC1CCC(O)CC1[2-],1,-2,-10384.77,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.82
+3,ON(O)C1CCCCC1,1,0,-11882.04,ON(O)C1CCCCC1[*1-],2,-1,-11885.45,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-3.41
+4,OO,1,0,-4089.49,OO[*1-],2,-1,-4094.73,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-5.24
+5,NCC(CN)C1CCC(C(CN)CN)CC1[*1-],2,-1,-18465.9,NCC(CN)C1CCC(C(CN)CN)CC1[2-],1,-2,-18469.77,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-3.87
+6,C1CCC(NNC2CCCCC2)CC1,1,0,-15579.24,C1CCC(NNC2CCCCC2)CC1[*1-],2,-1,-15582.33,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-3.09
+7,C1CSC(C2SCCS2)S1[1+],2,1,-49617.56,C1CSC(C2SCCS2)S1,1,0,-49621.93,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-4.37
+8,C1CCC2CC3CCCCC3CC2C1[1+],2,1,-14669.41,C1CCC2CC3CCCCC3CC2C1,1,0,-14674.67,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-5.26
+9,OC1CCC(O)CC1,1,0,-10377.85,OC1CCC(O)CC1[*1-],2,-1,-10381.95,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-4.1
+10,C1CCC2SC3CCCCC3SC2C1[1+],2,1,-34232.99,C1CCC2SC3CCCCC3SC2C1,1,0,-34238.05,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-5.06
+11,OC(C1CCCCC1)C1CCCCC1,1,0,-15684.81,OC(C1CCCCC1)C1CCCCC1[*1-],2,-1,-15687.41,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.6
