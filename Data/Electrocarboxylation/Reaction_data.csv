@@ -1,14 +1,8 @@
-,Reagent SMILES,Reagent multiplicity,Reagent charge,"Reagent energy, eV",Product SMILES,Product multiplicity,Product charge,"Product energy, eV",Functional,Basis,Solvent,Reaction,Type,Mechanism,"Free energy, eV"
-0,CC1CCCCC1[*],2.0,0,-7368.43,CC1CCCCC1[1-],1.0,-1,-7371.35,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.92
-1,OCO,1.0,0,-5132.0,OCO[*1-],2.0,-1,-5134.41,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.41
-2,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.74,CC1CCCCC1[*] + CC1CCCCC1[1-],2.0,-1,-14739.78,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-1.04
-3,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.76,CC1CCCCC1[*] + CC1CCCCC1[1-],2.0,-1,-14739.78,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-1.02
-4,Cl[*],2.0,0,-12520.5,Cl[1-],1.0,-1,-12527.05,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-6.55
-5,ClCC1CCCCC1,1.0,0,-19891.51,CC1CCCCC1[*] + Cl[1-],2.0,-1,-19895.48,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-3.97
-6,ClCC1CCCCC1,1.0,0,-19891.51,CC1CCCCC1[1-] + Cl[*],2.0,-1,-19891.85,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-0.34
-7,CC1CCCCC1[*] + OCO[*1-],1.0,-1,-12502.84,OC(O)CC1CCCCC1[1-],1.0,-1,-12504.75,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.91
-8,CC1CCCCC1[1-] + OCO,1.0,-1,-12503.35,OC(O)CC1CCCCC1[1-],1.0,-1,-12504.75,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.4
-9,CC1CCCCC1[*] + CC1CCCCC1[*],1.0,0,-14736.86,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.74,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.88
-10,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.74,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.76,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,adiab.,stepwise,-0.02
-11,CC1CCCCC1[*] + Cl[*],1.0,0,-19888.93,ClCC1CCCCC1,1.0,0,-19891.51,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-2.58
-12,CC1CCCCC1[1-] + Cl[*],2.0,-1,-19891.85,CC1CCCCC1[*] + Cl[1-],2.0,-1,-19895.48,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-3.63
+,level_0,index,Reagent SMILES,Reagent multiplicity,Reagent charge,"Reagent energy, eV",Product SMILES,Product multiplicity,Product charge,"Product energy, eV",Functional,Basis,Solvent,Reaction,Type,Mechanism,"Free energy, eV","Reduction potential, V"
+0,0,0,CC1CCCCC1[*],2.0,0,-7368.43,CC1CCCCC1[1-],1.0,-1,-7371.35,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.92,-2.1799999999999997
+1,1,1,OCO,1.0,0,-5132.0,OCO[*1-],2.0,-1,-5134.41,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,adiab.,stepwise,-2.41,-2.6899999999999995
+2,2,5,ClCC1CCCCC1,1.0,0,-19891.51,CC1CCCCC1[*] + Cl[1-],2.0,-1,-19895.48,B3LYP,MA-DEF2-TZVPP,acetonitrile,electrochem.,dissoc.,concerted,-3.97,-1.1299999999999994
+3,3,7,CC1CCCCC1[*] + OCO[*1-],1.0,-1,-12502.84,OC(O)CC1CCCCC1[1-],1.0,-1,-12504.75,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.91,NaN
+4,4,8,CC1CCCCC1[1-] + OCO,1.0,-1,-12503.35,OC(O)CC1CCCCC1[1-],1.0,-1,-12504.75,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.4,NaN
+5,5,9,CC1CCCCC1[*] + CC1CCCCC1[*],1.0,0,-14736.86,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.74,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,dissoc.,concerted,-1.88,NaN
+6,6,10,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.74,C1CCC(CCC2CCCCC2)CC1,1.0,0,-14738.76,B3LYP,MA-DEF2-TZVPP,acetonitrile,thermochem.,adiab.,stepwise,-0.02,NaN

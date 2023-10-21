@@ -12,10 +12,10 @@ while True:
     print(welcome_window)
     enter = int(input("Input number:\t"))
     if enter == 1:
-        with open("src/ferrocene_database_builder.py") as f:
+        with open("src/database_builder.py") as f:
             exec(f.read())
     elif enter == 2:
-        with open("src/database_builder.py") as f:
+        with open("src/data_manager.py") as f:
             exec(f.read())
     else:
         print("Exit")
