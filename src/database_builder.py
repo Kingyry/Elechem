@@ -6,23 +6,30 @@ sys.path.append('src')
 import pandas
 import numpy
 from parsers import ORCA_parser
-from itertools import permutations
-from itertools import combinations
 from data import electron_charge, vacuum_dielectric_permitivity, solvent_refractive_index, solvent_dielectric_permitivity, J_to_eV, gas_constant, k_Boltzman, solvent_viscosity
 
-def Unique_comb(a, b):
-    unique_combinations = []
-    permut1 = permutations(a, len(b))
-    permut2 = permutations(b, len(a))
-    for comb in permut1:
-        zipped = zip(comb, b)
-        if zipped not in unique_combinations:
-            unique_combinations.append(list(zipped))
-    for comb in permut2:
-        zipped = zip(a, comb)
-        if zipped not in unique_combinations:
-            unique_combinations.append(list(zipped))
-    return unique_combinations
+def Diffusion(solvent, temperature, mol_vol):
+    diff=k_Boltzman*temperature/(6*numpy.pi*solvent_viscosity[solvent]*(3*mol_vol/(4*numpy.pi))**(1/3))
+    return diff*10000
+
+def Solvent_reorganization(mol_vol, solvent):
+    mol_rad = (3*mol_vol/(4*numpy.pi))**(1/3)
+    solvent_reorg_eng = (electron_charge**2)/(8*numpy.pi*vacuum_dielectric_permitivity)*(1/(solvent_refractive_index[solvent]**2)-1/solvent_dielectric_permitivity[solvent])*(1/mol_rad-1/(2*mol_rad))
+    solvent_reorg_eng = solvent_reorg_eng*J_to_eV
+    return float('{:.2f}'.format(solvent_reorg_eng))
+
+def Collision_factor(temperature, molar_mass):
+    Z = numpy.sqrt(gas_constant*temperature/2/numpy.pi/(molar_mass/1000))*100
+    return Z
+
+
+def Find_files(filename, search_path):
+   '''This function finds all files with the name in directory'''
+   result = []
+   for root, dir, files in os.walk(search_path):
+      if filename in files:
+         result.append(os.path.join(root, filename))
+   return result
 
 def SMILES_modifier(mult, charge):
     if mult == 2 and charge == 0:
@@ -42,60 +49,6 @@ def SMILES_modifier(mult, charge):
         return mod
     else:
         return ''
-
-def Drop_duplicated(database):
-    duplicated = database.duplicated(keep = False)
-    if any(duplicated) == True:
-        index = [i[0] for i in enumerate(duplicated) if i[1] == True]
-        duplicated = database.iloc[index].drop_duplicates().min()
-        database = database.drop_duplicates(keep = False)
-        database = pandas.concat([database, duplicated.to_frame().T], ignore_index = True)
-    else:
-        database = pandas.concat([database], ignore_index = True)
-    return database
-
-def Elements_from_SMILES(SMILES):
-    return SMILES.split('.')
-
-def Diffusion(solvent, temperature, mol_vol):
-    diff=k_Boltzman*temperature/(6*numpy.pi*solvent_viscosity[solvent]*(3*mol_vol/(4*numpy.pi))**(1/3))
-    return diff*10000
-
-def Solvent_reorganization(mol_vol, solvent):
-    mol_rad = (3*mol_vol/(4*numpy.pi))**(1/3)
-    solvent_reorg_eng = (electron_charge**2)/(8*numpy.pi*vacuum_dielectric_permitivity)*(1/(solvent_refractive_index[solvent]**2)-1/solvent_dielectric_permitivity[solvent])*(1/mol_rad-1/(2*mol_rad))
-    solvent_reorg_eng = solvent_reorg_eng*J_to_eV
-    return float('{:.2f}'.format(solvent_reorg_eng))
-
-def Collision_factor(temperature, molar_mass):
-    Z = numpy.sqrt(gas_constant*temperature/2/numpy.pi/(molar_mass/1000))*100
-    return Z
-
-def Geo_comp(geo1, geo2):
-    '''This function compares two geometries'''
-    geo1 = ORCA_parser(geo1).geometry()
-    geo2 = ORCA_parser(geo2).geometry()
-    if len(geo1.positions) != len(geo2.positions):
-        return False
-    elif len(geo1.positions) == len(geo2.positions):
-        res = []
-        for i in enumerate(geo1.positions):
-            tr = []
-            for j in enumerate(i[1]):
-                if geo1.positions[i[0]][j[0]] == geo2.positions[i[0]][j[0]]:
-                    tr.append(True)
-                else:
-                    tr.append(False)
-            res.append(tr)
-    return all([all(j[1]) for j in enumerate(res)])
-
-def Find_files(filename, search_path):
-   '''This function finds all files with the name in directory'''
-   result = []
-   for root, dir, files in os.walk(search_path):
-      if filename in files:
-         result.append(os.path.join(root, filename))
-   return result
 
 def Data_collection(files):
     columns = ['SMILES', 'Molar mass', 'Functional', 'Basis', 'Multiplicity', 'Charge', 'Temperature, K', 'Solvent', 'ZPE, eV', 'H, eV', 'TS, eV', 'G, eV', 'G-ZPE, eV', 'Dipole, D', 'Molecular volume', 'path']
@@ -131,247 +84,6 @@ def Data_collection(files):
     output_path = input('Output path:\t') + '/' + 'Database.csv'
     return output_path, database.to_csv(output_path)
 
-def SMILES_analysis(dataframe):
-    '''This function separates data by smiles in the right group'''
-    index_molecules = []
-    index_adiabatic = []
-    index_radicals = []
-    index_BDE = []
-    for i in enumerate(dataframe['SMILES']):
-        if (dataframe['Charge'][i[0]] == 0 and dataframe['Multiplicity'][i[0]] == 1 and ('.' not in i[1])):
-            index_molecules.append(i[0])
-        elif (dataframe['Charge'][i[0]] != 0 and dataframe['Multiplicity'][i[0]] >= 1):
-            index_adiabatic.append(i[0])
-        elif (dataframe['Charge'][i[0]] == 0 and dataframe['Multiplicity'][i[0]] == 2):
-            index_radicals.append(i[0])
-    for i in enumerate(dataframe['SMILES']):
-        for j in dataframe['path'].iloc[index_adiabatic]:
-            geo1 = dataframe['path'][i[0]]
-            geo2 = j
-            if (Geo_comp(geo1, geo2) == True and (dataframe['Charge'][i[0]] == 0 and dataframe['Multiplicity'][i[0]] == 1) and (i[0] not in index_BDE)):
-                index_BDE.append(i[0])
-    index_molecules = [i for i in index_molecules if i not in index_BDE]
-    return [index_molecules, index_adiabatic, index_radicals, index_BDE]
-
-def Electrochem_reactions(database):
-    x = SMILES_analysis(database)
-    database = database.drop(x[3]).reset_index(drop=True)
-    all_comb = combinations(database.index, 2)
-    all_comb = [i for i in all_comb]
-    for i in enumerate(database.index):
-        all_comb.append((i[0], i[0]))
-
-    all_comb = [(i[0], i[1]) for i in all_comb if (database['Functional'].iloc[i[0]] == database['Functional'].iloc[i[1]] and database['Basis'].iloc[i[0]] == database['Basis'].iloc[i[1]] and database['Solvent'].iloc[i[0]] == database['Solvent'].iloc[i[1]])]
-
-    all_comb = [(i[0], i[1]) for i in all_comb if float('{:.3f}'.format(database['Molar mass'].iloc[i[0]] + database['Molar mass'].iloc[i[1]])) in database['Molar mass'].values]
-
-
-    SMILES = pandas.Series([(database['SMILES'].iloc[i[0]] + ' + ' +  database['SMILES'].iloc[i[1]]) for i in all_comb])
-
-    molar_mass = [(database['Molar mass'].iloc[i[0]] +  database['Molar mass'].iloc[i[1]]) for i in all_comb]
-
-    functional = [(database['Functional'].iloc[i[0]]) for i in all_comb]
-
-    basis = [(database['Basis'].iloc[i[0]]) for i in all_comb]
-
-    spin_1 = numpy.array([(database['Multiplicity'].iloc[i[0]] - 1)/2 for i in all_comb])
-
-    spin_2 = numpy.array([(database['Multiplicity'].iloc[i[1]] - 1)/2 for i in all_comb])
-
-    spin = numpy.array([(spin_1[i[0]] + spin_2[i[0]]) if (spin_1[i[0]] + spin_2[i[0]]) != 1 else (spin_1[i[0]] - spin_2[i[0]]) for i in enumerate(spin_1)])
-
-    mult = (2*(spin)+ 1)
-
-
-    charge = [(database['Charge'].iloc[i[0]] + database['Charge'].iloc[i[1]]) for i in all_comb]
-
-
-    temp = [(database['Temperature, K'].iloc[i[0]]) for i in all_comb]
-
-    solvent = [(database['Solvent'].iloc[i[0]]) for i in all_comb]
-
-    ZPE = [(database['ZPE, eV'].iloc[i[0]] + database['ZPE, eV'].iloc[i[1]]) for i in all_comb]
-
-    H = [(database['H, eV'].iloc[i[0]] + database['H, eV'].iloc[i[1]]) for i in all_comb]
-
-    TS = [(database['TS, eV'].iloc[i[0]] + database['TS, eV'].iloc[i[1]]) for i in all_comb]
-
-    G = [(database['G, eV'].iloc[i[0]] + database['G, eV'].iloc[i[1]]) for i in all_comb]
-
-    G_ZPE = [(database['G-ZPE, eV'].iloc[i[0]] + database['G-ZPE, eV'].iloc[i[1]]) for i in all_comb]
-
-    dip = ['NaN' for i in enumerate(G_ZPE)]
-    mol_vol = ['NaN' for i in enumerate(G_ZPE)]
-    path = ['NaN' for i in enumerate(G_ZPE)]
-
-    columns = ['SMILES', 'Molar mass', 'Functional', 'Basis', 'Multiplicity', 'Charge', 'Temperature, K', 'Solvent', 'ZPE, eV', 'H, eV', 'TS, eV', 'G, eV', 'G-ZPE, eV', 'Dipole, D', 'Molecular volume', 'path']
-
-    df = pandas.DataFrame(numpy.array([SMILES, molar_mass, functional, basis, mult, charge, temp, solvent, ZPE, H, TS, G, G_ZPE, dip, mol_vol, path]).T, columns = columns)
-    if df.empty == False:
-        df = df.loc[(df['Charge'] == -1) & (df['Multiplicity'] == 2)]
-        database = pandas.concat([database, df], ignore_index = True)
-
-    columns = ['Reagent SMILES', 'Reagent multiplicity', 'Reagent charge', 'Reagent energy, eV', 'Product SMILES','Product multiplicity', 'Product charge', 'Product energy, eV', 'Functional', 'Basis', 'Solvent', 'Reaction', 'Type', 'Mechanism', 'Free energy, eV']
-    dataframe = pandas.DataFrame(columns = columns)
-    #electron = (0.5, -1) # (electron spin, charge)
-    for i in enumerate(database.index):
-        mult = database['Multiplicity'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]])]
-        charge = database['Charge'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]])]
-        #spin change due to the electron transfer
-        #old_spin = (mult - 1)/2
-        #new_spin = numpy.array([(i[1] - electron[0]) if i[1] == 0.5 else (i[1] + electron[0]) for i in enumerate(old_spin)])
-        #new_mult = 2*new_spin + 1
-        #new_charge = numpy.array([(i[1] + electron[1]) for i in enumerate(charge)])
-
-
-        reagent_smiles = database['SMILES'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]]) & (database['Molar mass'] == database['Molar mass'].iloc[i[0]]) & (database['Multiplicity'] == database['Multiplicity'].iloc[i[0]]) & (database['Charge'] == database['Charge'].iloc[i[0]])]
-
-        product_smiles = database['SMILES'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]]) & (database['Molar mass'] == database['Molar mass'].iloc[i[0]]) & (database['Multiplicity'] != database['Multiplicity'].iloc[i[0]]) & (database['Charge'] != database['Charge'].iloc[i[0]])]
-
-        if len(reagent_smiles.index) != 0 and len(product_smiles.index) != 0:
-            uni_comb = Unique_comb(reagent_smiles.index, product_smiles.index)
-
-            for i in enumerate(uni_comb):
-                if '+' in database['SMILES'].iloc[i[1][0][1]]:
-                    react_type = 'dissoc.'
-                    mech = 'concerted'
-                elif '.' in database['SMILES'].iloc[i[1][0][1]]:
-                    react_type = 'dissoc.'
-                    mech = 'concerted'
-                else:
-                    react_type = 'adiab.'
-                    mech = 'stepwise'
-                data = {'Reagent SMILES': database['SMILES'].iloc[i[1][0][0]],
-                        'Reagent multiplicity': database['Multiplicity'].iloc[i[1][0][0]],
-                        'Reagent charge': database['Charge'].iloc[i[1][0][0]],
-                        'Reagent energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][0]])),
-                        'Product SMILES': database['SMILES'].iloc[i[1][0][1]],
-                        'Product multiplicity': database['Multiplicity'].iloc[i[1][0][1]],
-                        'Product charge': database['Charge'].iloc[i[1][0][1]],
-                        'Functional': database['Functional'].iloc[i[1][0][0]],
-                        'Basis': database['Basis'].iloc[i[1][0][0]],
-                        'Solvent': database['Solvent'].iloc[i[1][0][0]],
-                        'Product energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][1]])),
-                        'Reaction': 'electrochem.',
-                        'Type': react_type,
-                        'Mechanism': mech,
-                        'Free energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][1]] - database['G, eV'].iloc[i[1][0][0]]))}
-                dataframe.loc[len(dataframe)] = data
-
-    dataframe = dataframe.drop_duplicates(subset = ['Reagent SMILES','Product SMILES', 'Free energy, eV'])
-    dataframe = dataframe[dataframe['Free energy, eV'] < 0].reset_index()
-    dataframe = dataframe.drop(columns = ['index'])
-    return dataframe
-
-
-def Thermochem_reactions(database):
-    x = SMILES_analysis(database)
-    database = database.drop(x[3]).reset_index(drop=True)
-    all_comb = combinations(database.index, 2)
-    all_comb = [i for i in all_comb]
-    for i in enumerate(database.index):
-        all_comb.append((i[0], i[0]))
-
-    all_comb = [(i[0], i[1]) for i in all_comb if (database['Functional'].iloc[i[0]] == database['Functional'].iloc[i[1]] and database['Basis'].iloc[i[0]] == database['Basis'].iloc[i[1]] and database['Solvent'].iloc[i[0]] == database['Solvent'].iloc[i[1]])]
-
-    all_comb = [(i[0], i[1]) for i in all_comb if float('{:.3f}'.format(database['Molar mass'].iloc[i[0]] + database['Molar mass'].iloc[i[1]])) in database['Molar mass'].values]
-
-
-
-    SMILES = pandas.Series([(database['SMILES'].iloc[i[0]] + ' + ' +  database['SMILES'].iloc[i[1]]) for i in all_comb])
-
-    molar_mass = [(database['Molar mass'].iloc[i[0]] +  database['Molar mass'].iloc[i[1]]) for i in all_comb]
-
-    functional = [(database['Functional'].iloc[i[0]]) for i in all_comb]
-
-    basis = [(database['Basis'].iloc[i[0]]) for i in all_comb]
-
-    spin_1 = numpy.array([(database['Multiplicity'].iloc[i[0]] - 1)/2 for i in all_comb])
-
-    spin_2 = numpy.array([(database['Multiplicity'].iloc[i[1]] - 1)/2 for i in all_comb])
-
-    spin = numpy.array([(spin_1[i[0]] + spin_2[i[0]]) if (spin_1[i[0]] + spin_2[i[0]]) != 1 else (spin_1[i[0]] - spin_2[i[0]]) for i in enumerate(spin_1)])
-
-    mult = (2*(spin)+ 1)
-
-
-    charge = [(database['Charge'].iloc[i[0]] + database['Charge'].iloc[i[1]]) for i in all_comb]
-
-
-    temp = [(database['Temperature, K'].iloc[i[0]]) for i in all_comb]
-
-    solvent = [(database['Solvent'].iloc[i[0]]) for i in all_comb]
-
-    ZPE = [(database['ZPE, eV'].iloc[i[0]] + database['ZPE, eV'].iloc[i[1]]) for i in all_comb]
-
-    H = [(database['H, eV'].iloc[i[0]] + database['H, eV'].iloc[i[1]]) for i in all_comb]
-
-    TS = [(database['TS, eV'].iloc[i[0]] + database['TS, eV'].iloc[i[1]]) for i in all_comb]
-
-    G = [(database['G, eV'].iloc[i[0]] + database['G, eV'].iloc[i[1]]) for i in all_comb]
-
-    G_ZPE = [(database['G-ZPE, eV'].iloc[i[0]] + database['G-ZPE, eV'].iloc[i[1]]) for i in all_comb]
-
-    dip = ['NaN' for i in enumerate(G_ZPE)]
-    mol_vol = ['NaN' for i in enumerate(G_ZPE)]
-    path = ['NaN' for i in enumerate(G_ZPE)]
-
-    columns = ['SMILES', 'Molar mass', 'Functional', 'Basis', 'Multiplicity', 'Charge', 'Temperature, K', 'Solvent', 'ZPE, eV', 'H, eV', 'TS, eV', 'G, eV', 'G-ZPE, eV', 'Dipole, D', 'Molecular volume', 'path']
-
-    df = pandas.DataFrame(numpy.array([SMILES, molar_mass, functional, basis, mult, charge, temp, solvent, ZPE, H, TS, G, G_ZPE, dip, mol_vol, path]).T, columns = columns)
-    if df.empty == False:
-        #df = df.loc[(df['Charge'] == -1) & (df['Multiplicity'] == 2)]
-        database = pandas.concat([database, df], ignore_index = True)
-
-    columns = ['Reagent SMILES', 'Reagent multiplicity', 'Reagent charge', 'Reagent energy, eV', 'Product SMILES','Product multiplicity', 'Product charge', 'Product energy, eV', 'Functional', 'Basis', 'Solvent', 'Reaction', 'Type', 'Mechanism', 'Free energy, eV']
-    dataframe = pandas.DataFrame(columns = columns)
-
-    for i in enumerate(database.index):
-        mult = database['Multiplicity'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]])]
-        charge = database['Charge'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]])]
-
-
-        reagent_smiles = database['SMILES'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]]) & (database['Molar mass'] == database['Molar mass'].iloc[i[0]]) & (database['Multiplicity'] == database['Multiplicity'].iloc[i[0]]) & (database['Charge'] == database['Charge'].iloc[i[0]])]
-
-        product_smiles = database['SMILES'].loc[(database['Functional'] == database['Functional'].iloc[i[0]]) & (database['Basis'] == database['Basis'].iloc[i[0]]) & (database['Solvent'] == database['Solvent'].iloc[i[0]]) & (database['Molar mass'] == database['Molar mass'].iloc[i[0]]) & (database['Charge'] == database['Charge'].iloc[i[0]])]
-
-
-        if len(reagent_smiles.index) != 0 and len(product_smiles.index) != 0:
-            uni_comb = Unique_comb(reagent_smiles.index, product_smiles.index)
-
-            for i in enumerate(uni_comb):
-                if '+' in database['SMILES'].iloc[i[1][0][1]] or '+' in database['SMILES'].iloc[i[1][0][0]]:
-                    react_type = 'dissoc.'
-                    mech = 'concerted'
-                elif '.' in database['SMILES'].iloc[i[1][0][1]] or '.' in database['SMILES'].iloc[i[1][0][0]]:
-                    react_type = 'dissoc.'
-                    mech = 'concerted'
-                else:
-                    react_type = 'adiab.'
-                    mech = 'stepwise'
-                data = {'Reagent SMILES': database['SMILES'].iloc[i[1][0][0]],
-                        'Reagent multiplicity': database['Multiplicity'].iloc[i[1][0][0]],
-                        'Reagent charge': database['Charge'].iloc[i[1][0][0]],
-                        'Reagent energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][0]])),
-                        'Product SMILES': database['SMILES'].iloc[i[1][0][1]],
-                        'Product multiplicity': database['Multiplicity'].iloc[i[1][0][1]],
-                        'Product charge': database['Charge'].iloc[i[1][0][1]],
-                        'Product energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][1]])),
-                        'Functional': database['Functional'].iloc[i[1][0][0]],
-                        'Basis': database['Basis'].iloc[i[1][0][0]],
-                        'Solvent': database['Solvent'].iloc[i[1][0][0]],
-                        'Reaction': 'thermochem.',
-                        'Type': react_type,
-                        'Mechanism': mech,
-                        'Free energy, eV': float('{:.2f}'.format(database['G, eV'].iloc[i[1][0][1]] - database['G, eV'].iloc[i[1][0][0]]))}
-                dataframe.loc[len(dataframe)] = data
-
-    dataframe = dataframe.drop_duplicates(subset = ['Free energy, eV'], keep = 'first')
-    dataframe = dataframe[dataframe['Free energy, eV'] < 0].reset_index()
-    dataframe = dataframe.drop(columns = ['index'])
-    return dataframe
-
-
 
 #Main code
 #input path to the calculations results by user
@@ -380,25 +92,3 @@ input_path = input('Input path:\t')
 files = Find_files("out.txt", input_path)
 
 Database = Data_collection(files)
-Newdatabase = pandas.read_csv(Database[0])
-#Newdatabase = pandas.read_csv('Data/Reference_electrodes/Ferrocene/Database.csv')
-Echem = input("Do you have electhochemical reactions?: (Y/N)\t")
-if Echem == 'Y':
-    Electrochem = Electrochem_reactions(Newdatabase)
-elif Echem == 'N':
-    Electrochem = pandas.DataFrame()
-
-Tchem = input("Do you have thermochemical reactions?: (Y/N)\t")
-if Tchem == 'Y':
-    Reactions = Thermochem_reactions(Newdatabase)
-elif Tchem == 'N':
-    Reactions = pandas.DataFrame()
-
-if Electrochem.empty == False and Reactions.empty == False:
-    Database = pandas.concat([Electrochem, Reactions], ignore_index = True)
-elif Electrochem.empty == True:
-    Database = Reactions
-elif Reactions.empty == True:
-    Database = Electrochem
-
-Database.to_csv(input('Output path:\t') + '/' + 'Reaction_data.csv')
