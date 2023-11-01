@@ -8,6 +8,9 @@ vacuum_dielectric_permitivity = 8.8541878128e-12 # F/m
 gas_constant = 8.31446261815324 # J/K/mol
 faraday = 9.64853321233100184e4 # C/mol
 k_Boltzman = 1.380649e-23 # J/K
+Avogadro = 6.0221408e+23 #
+Planck = 6.62607015e10-34# m2*kg/s
+
 
 solvent_dielectric_permitivity = {'water': 80.4,
                                 'acetonitrile': 36.6,

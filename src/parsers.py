@@ -8,9 +8,6 @@ from ase import Atoms
 from ase.data import atomic_masses_iupac2016
 from ase.visualize import view
 from ase.io import write
-from rdkit import Chem
-from ase.geometry.analysis import Analysis
-from itertools import combinations
 from openbabel import pybel
 from data import Angstrom, eV
 
@@ -53,7 +50,7 @@ class ORCA_parser:
               'charge': int(charge),
               'multiplicity': int(multiplicity),
               'solvation': solvation,
-              'temperature': temperature[len(temperature)-1],
+              'temperature': float(temperature[len(temperature)-1]),
               'dipole': float('{:.2f}'.format(float(dipole)))}
         return info
 
@@ -98,64 +95,10 @@ class ORCA_parser:
         Returns SMILES of the molecule
         '''
         geo = self.geometry()
-
-        #Number of atoms calculation
-        symbols = geo.get_chemical_symbols()
-        number_of_atoms = len(symbols)
-
-        #Number of bonds calculation
-        unique_symbols = []
-        for i in symbols:
-            if i not in unique_symbols:
-                unique_symbols.append(i)
-        Bonds = []
-        for i in enumerate(unique_symbols):
-            Bonds.append((i[1], i[1]))
-        for i in combinations(unique_symbols, 2):
-            Bonds.append(i)
-        geo_analysis = Analysis(geo)
-        at_combinations = []
-        for i in Bonds:
-            Bonds = geo_analysis.get_bonds(i[0], i[1], unique=True)
-            if all(Bonds) == True:
-                #BondValues = geo_analysis.get_values(Bonds)
-                Bonds_list = [item for sublist in Bonds for item in sublist]
-                at_combinations.append(Bonds_list)
-        Bonds = sorted([item for sublist in at_combinations for item in sublist])
-        number_of_bonds = len(Bonds)
-        at_number = []
-        for i in enumerate(Bonds):
-            for j in enumerate(i[1]):
-                if j[1] not in at_number:
-                    at_number.append(j[1])
-        at_number = sorted(at_number)
-        #Bonds type
-        bond_type = []
-        for i in Bonds:
-            if float('{:.2f}'.format(geo.get_distance(i[0], i[1]))) < 1.1:
-                bond_type.append(1)
-            elif (float('{:.2f}'.format(geo.get_distance(i[0], i[1]))) < 1.17) and (float('{:.2f}'.format(geo.get_distance(i[0], i[1]))) > 1.1):
-                bond_type.append(3)
-            elif (float('{:.2f}'.format(geo.get_distance(i[0], i[1]))) < 1.41) and (float('{:.2f}'.format(geo.get_distance(i[0], i[1]))) > 1.35):
-                bond_type.append('ar')
-            else:
-                bond_type.append(1)
-        #File generation
-        f = open("gen_structure.mol2", "w")
-        Molecule_section_line = """@<TRIPOS>MOLECULE\n*****\n{0} {1} 0 0 0\nSMALL\nNO_CHARGES\n\n@<TRIPOS>ATOM\n"""
-        f.write(Molecule_section_line.format(number_of_atoms, number_of_bonds))
-        Atom_section_line = """{0} {1}\t\t\t{2}\t{3}\t{4} {5}\t{6}  {7}\n"""
-        for i in range(len(symbols)):
-            x, y, z = geo.positions[i]
-            f.write(Atom_section_line.format(i+1, symbols[i], '{:.4f}'.format(x), '{:.4f}'.format(y), '{:.4f}'.format(z), symbols[i], 1, 'MOL'))
-        f.write('@<TRIPOS>BOND\n')
-        Bond_section_line = """{0}\t{1}\t{2}\t{3}\n"""
-        for i in range(number_of_bonds):
-            f.write(Bond_section_line.format(i + 1, Bonds[i][0] + 1, Bonds[i][1] + 1, bond_type[i]))
-        f.close()
-        mol = next(pybel.readfile('mol2', 'gen_structure.mol2'))
-        smiles = mol.write(format="smi").split()[0].strip()
-        os.remove('gen_structure.mol2')
+        write('gen_structure.xyz', images = geo)
+        mol = next(pybel.readfile('xyz', 'gen_structure.xyz'))
+        smiles = mol.write('smi').split()[0]
+        os.remove('gen_structure.xyz')
         return smiles
 
     def thermodynamics(self):
