@@ -6,21 +6,12 @@ sys.path.append('src')
 import pandas
 import numpy
 from parsers import ORCA_parser
-from data import electron_charge, vacuum_dielectric_permitivity, solvent_refractive_index, solvent_dielectric_permitivity, J_to_eV, gas_constant, k_Boltzman, solvent_viscosity
+from data import k_Boltzman, solvent_viscosity
 
 def Diffusion(solvent, temperature, mol_vol):
     diff = k_Boltzman*temperature/(6*numpy.pi*solvent_viscosity[solvent]*(3*mol_vol/(4*numpy.pi))**(1/3))
     return diff*10000
 
-def Solvent_reorganization(mol_vol, solvent):
-    mol_rad = (3*mol_vol/(4*numpy.pi))**(1/3)
-    solvent_reorg_eng = (electron_charge**2)/(8*numpy.pi*vacuum_dielectric_permitivity)*(1/(solvent_refractive_index[solvent]**2)-1/solvent_dielectric_permitivity[solvent])*(1/mol_rad-1/(2*mol_rad))
-    solvent_reorg_eng = solvent_reorg_eng*J_to_eV
-    return float('{:.2f}'.format(solvent_reorg_eng))
-
-def Collision_factor(temperature, molar_mass):
-    Z = numpy.sqrt(gas_constant*temperature/2/numpy.pi/(molar_mass/1000))*100
-    return Z
 
 def Find_files(filename, search_path):
    '''This function finds all files with the name in directory'''
@@ -31,7 +22,7 @@ def Find_files(filename, search_path):
    return result
 
 def Data_collection(files):
-    columns = ['SMILES', 'Molar mass', 'Functional', 'Basis', 'Multiplicity', 'Charge', 'Temperature, K', 'Solvent', 'ZPE, eV', 'H, eV', 'TS, eV', 'G, eV', 'G-ZPE, eV', 'Dipole, D', 'Molecular volume', 'Diffusion cm2/s', 'path']
+    columns = ['SMILES', 'Molar mass', 'Functional', 'Basis', 'Multiplicity', 'Charge', 'Temperature, K', 'Solvent', 'ZPE, eV', 'H, eV', 'TS, eV', 'G, eV', 'G-ZPE, eV', 'Dipole, D', 'Molecular volume', 'Diffusion, cm2/s', 'path']
     database = pandas.DataFrame(columns=columns)
     for i in enumerate(files):
         file_data = ORCA_parser(i[1])
@@ -74,7 +65,7 @@ def Data_collection(files):
                      'G-ZPE, eV': par,
                      'Dipole, D': file_data.info()['dipole'],
                      'Molecular volume': file_data.mol_vol(),
-                     'Diffusion cm2/s': D,
+                     'Diffusion, cm2/s': D,
                      'path': i[1]}
         database.loc[len(database)] = dataframe
     output_path = input('Output path:\t') + '/' + 'Database.csv'

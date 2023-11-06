@@ -45,12 +45,16 @@ class ORCA_parser:
         multiplicity = re.search('Multiplicity\s+\w+\s+\.+\s+(.+?)\n', self.filename, re.IGNORECASE).group(1)
         dipole = re.search('Magnitude \W(Debye)\W\s+\:\s+(.+?)\n', self.filename, re.IGNORECASE).group(2)
         temperature = re.findall('Temperature\s+\.+\s+(.+?)\w+\n', self.filename, re.IGNORECASE)
+        if len(temperature) == 0:
+            temp = 'NaN'
+        else:
+            temp = float(temperature[len(temperature)-1])
         info = {'functional': functional.upper(),
               'basis': basis.upper(),
               'charge': int(charge),
               'multiplicity': int(multiplicity),
               'solvation': solvation,
-              'temperature': float(temperature[len(temperature)-1]),
+              'temperature': temp,
               'dipole': float('{:.2f}'.format(float(dipole)))}
         return info
 
@@ -100,6 +104,15 @@ class ORCA_parser:
         smiles = mol.write('smi').split()[0]
         os.remove('gen_structure.xyz')
         return smiles
+
+    def stability(self):
+        if 'Stability Analysis indicates a stable HF/KS wave function.' in self.filename:
+            stability = 'stable'
+        elif 'Stability Analysis indicates an UNSTABLE HF/KS wave function' in self.filename:
+            stability = 'unstable'
+        else:
+            stability = 'NaN'
+        return stability
 
     def thermodynamics(self):
         '''

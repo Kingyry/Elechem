@@ -4,11 +4,11 @@ sys.path.append('src')
 
 import pandas
 import numpy
+
 from parsers import ORCA_parser
 from itertools import permutations
 from itertools import combinations
 from data import electron_charge, vacuum_dielectric_permitivity, solvent_refractive_index, solvent_dielectric_permitivity, J_to_eV, gas_constant, faraday, Avogadro, k_Boltzman, Planck
-
 
 def Choose_reactions(path):
     database = pandas.read_csv(path)
@@ -389,7 +389,7 @@ def Standard_rate(path):
         if database['Reaction'].iloc[i[0]] == 'thermochem.':
             if '.' in SMILES_reagent:
                 SMILES = SMILES_reagent.split('.')
-                D = numpy.sum(numpy.array([database1['Diffusion cm2/s'].loc[database1['SMILES'] == i].values[0] for i in SMILES])/10000)
+                D = numpy.sum(numpy.array([database1['Diffusion, cm2/s'].loc[database1['SMILES'] == i].values[0] for i in SMILES])/10000)
                 l = numpy.sum(numpy.array([(3*(database1['Molecular volume'].loc[(database1['SMILES'] == i)].values[0])/(4*numpy.pi))**(1/3) for i in SMILES]))
                 k0 = 4*numpy.pi*Avogadro*D*l
                 rate_constant.append(k0)
@@ -401,6 +401,17 @@ def Standard_rate(path):
     database = database.reset_index(drop = True)
     return database.to_csv(path)
 
+def Stability(path):
+    database = pandas.read_csv(path)
+    stability = []
+    for i1 in enumerate(database.index):
+        file = ORCA_parser(database['path'].iloc[i1[0]])
+        stability.append(file.stability())
+    database['Stability'] = stability
+    database = database.drop(columns = ['Unnamed: 0'])
+    return database.to_csv(path)
+
+
 while True:
     print('''1. Generate reactions.
 2. Choose reaction from your database.
@@ -408,6 +419,7 @@ while True:
 4. Calulate reduction potential.
 5. Calculate reorganization energy.
 6. Calaulate standard rate constant.
+7. Stability analysis.
 0. Exit to the main menu''')
     enter = int(input("Input number:\t"))
     if enter == 2:
@@ -448,6 +460,9 @@ while True:
         path = input('Input path to your reaction database:\t')
         #electrode = input('Electrode:\t')
         Standard_rate(path)
+    elif enter ==7:
+        path = input('Input path to your database:\t')
+        Stability(path)
     else:
         print("Back to main menu")
         break
