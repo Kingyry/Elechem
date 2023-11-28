@@ -38,7 +38,11 @@ def Diffusion_constant(Reaction_database, Database):
 print("***Set reactions and environment conditions***\n\n")
 path = input('Input path to your reaction database:\t')
 Reaction_database = pandas.read_csv(path)
-Reaction_database = Reaction_database.sort_values(by = ['Reduction potential, V'], ascending=False).reset_index(drop = True)
+CHARGE = (Reaction_database['Reagent charge'].iloc[0] + Reaction_database['Product charge'].iloc[0])
+if Reaction_database['Reagent charge'].iloc[0] > CHARGE:
+    Reaction_database = Reaction_database.sort_values(by = ['Reduction potential, V'], ascending=False).reset_index(drop = True)
+elif Reaction_database['Reagent charge'].iloc[0] <= CHARGE:
+    Reaction_database = Reaction_database.sort_values(by = ['Reduction potential, V'], ascending=True).reset_index(drop = True)
 path = input('Input path to your database:\t')
 Database = pandas.read_csv(path)
 
@@ -71,7 +75,8 @@ for i in range(boxes):
         distance.append(distance[i-1] + dX)
 
 f.write('Simulation region [cm]: {0}\n'.format('{:.2f}'.format(X)))
-if Reaction_database['Reduction potential, V'].iloc[0] < 0:
+CHARGE = (Reaction_database['Reagent charge'].iloc[0] + Reaction_database['Product charge'].iloc[0])
+if Reaction_database['Reagent charge'].iloc[0] > CHARGE:
     initial_conc = float(input('Enter initial concentration of {0} [mol/cm3]:\t'.format(Reaction_database['Reagent SMILES'].iloc[0])))
 else:
     initial_conc = float(input('Enter initial concentration of {0} [mol/cm3]:\t'.format(Reaction_database['Product SMILES'].iloc[0])))
@@ -97,7 +102,8 @@ Product_fluxes = []
 Current_dens = []
 
 for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'electrochem.'].index):
-    if Reaction_database['Reaction'].iloc[i[0]] == 'electrochem.' and Reaction_database['Reduction potential, V'].iloc[0] < 0:
+    CHARGE = (Reaction_database['Reagent charge'].iloc[i[0]] + Reaction_database['Product charge'].iloc[i[0]])
+    if Reaction_database['Reaction'].iloc[i[0]] == 'electrochem.' and Reaction_database['Reagent charge'].iloc[i[0]] > CHARGE:
         I = numpy.arange(0, iterations, 1)
 
         Potential_sweep = (Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])*faraday/gas_constant/Reaction_database['Temperature, K'].iloc[i[0]]
@@ -114,23 +120,26 @@ for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'elect
             E_act_b = Reaction_database['lambda (tot.), eV'].iloc[i[0]]/4 - alpha_b*(Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])
             kb = Reaction_database['k0, cm/s'].iloc[i[0]]*numpy.exp(alpha_b*Potential_sweep)
         f.write('\n\nReaction {0}:\t'.format(i[0]) + Reaction_database['Reaction SMILES'].iloc[i[0]] + '\n')
-    elif Reaction_database['Reaction'].iloc[i[0]] == 'electrochem.' and Reaction_database['Reduction potential, V'].iloc[0] > 0:
+
+    elif Reaction_database['Reaction'].iloc[i[0]] == 'electrochem.' and Reaction_database['Reagent charge'].iloc[i[0]] <= CHARGE:
         I = numpy.arange(0, iterations, 1)
 
         Potential_sweep = (Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])*faraday/gas_constant/Reaction_database['Temperature, K'].iloc[i[0]]
 
-        alpha_b = 0.5 + (Total_scan - Reaction_database['Reduction potential, V'].iloc[i[0]])/4/Reaction_database['lambda (tot.), eV'].iloc[i[0]]
-        E_act_b = Reaction_database['lambda (tot.), eV'].iloc[i[0]]/4 + alpha_f*(Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])
-        kb = Reaction_database['k0, cm/s'].iloc[i[0]]*numpy.exp(-alpha_f*Potential_sweep)
-        if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
-            alpha_f = numpy.ones(iterations)*numpy.nan
-            E_act_f = numpy.ones(iterations)*numpy.nan
+        alpha_f = 0.5 + (Total_scan - Reaction_database['Reduction potential, V'].iloc[i[0]])/4/Reaction_database['lambda (tot.), eV'].iloc[i[0]]
+        alpha_f = 1 - alpha_f
+        E_act_f = Reaction_database['lambda (tot.), eV'].iloc[i[0]]/4 - alpha_f*(Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])
+        kf = Reaction_database['k0, cm/s'].iloc[i[0]]*numpy.exp(alpha_f*Potential_sweep)
+        if '.' in Reaction_database['Reagent SMILES'].iloc[i[0]]:
+            alpha_b = numpy.ones(iterations)*numpy.nan
+            E_act_b = numpy.ones(iterations)*numpy.nan
             kb = numpy.ones(iterations)*numpy.nan
         else:
-            alpha_f = (1 - alpha_f)
-            E_act_f = Reaction_database['lambda (tot.), eV'].iloc[i[0]]/4 - alpha_b*(Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])
-            kf = Reaction_database['k0, cm/s'].iloc[i[0]]*numpy.exp(alpha_f*Potential_sweep)
+            alpha_b = (alpha_f + 1)
+            E_act_b = Reaction_database['lambda (tot.), eV'].iloc[i[0]]/4 + alpha_b*(Total_scan-Reaction_database['Reduction potential, V'].iloc[i[0]])
+            kb = Reaction_database['k0, cm/s'].iloc[i[0]]*numpy.exp(-alpha_b*Potential_sweep)
         f.write('\n\nReaction {0}:\t'.format(i[0]) + Reaction_database['Reaction SMILES'].iloc[i[0]] + '\n')
+
     data = {'Iterations': I,
             'Potential [V]': numpy.around(Total_scan, 2),
             'alp_{f}': numpy.around(alpha_f, 2),
@@ -149,14 +158,17 @@ for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'elect
         Product_flux = numpy.zeros(iterations)
         Reagent_distr = numpy.ones((iterations, boxes))*initial_conc
 
-        if Reaction_database['Reduction potential, V'].iloc[0] < 0:
+        CHARGE = (Reaction_database['Reagent charge'].iloc[i[0]] + Reaction_database['Product charge'].iloc[i[0]])
+        if Reaction_database['Reagent charge'].iloc[0] > CHARGE:
             Reagent_SMILES = str(Reaction_database['Reagent SMILES'].iloc[i[0]])
             Diff_reagent = Database['Diffusion, cm2/s'].loc[Database['SMILES'] == Reagent_SMILES].values[0]
 
             if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
                 Products_SMILES = [i for i in Reaction_database['Product SMILES'].iloc[i[0]].split('.')]
+                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Product SMILES'].iloc[i[0]].split('.')))]
             else:
                 Products_SMILES = [Reaction_database['Product SMILES'].iloc[i[0]]]
+                Products_distr = [numpy.zeros((iterations, boxes))]
             D_products = []
             Diff_products = []
             for it in enumerate(Diffusion_constant(Reaction_database, Database)[0]):
@@ -170,20 +182,17 @@ for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'elect
                         Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
 
 
-            if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
-                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Product SMILES'].iloc[i[0]].split('.')))]
-            else:
-                Products_distr = [numpy.zeros((iterations, boxes))]
-
         #ELECTROOXYDATION
-        elif Reaction_database['Reduction potential, V'].iloc[0] > 0:
+        elif Reaction_database['Reagent charge'].iloc[i[0]] <= CHARGE:
             Reagent_SMILES = str(Reaction_database['Product SMILES'].iloc[i[0]])
             Diff_reagent = Database['Diffusion, cm2/s'].loc[Database['SMILES'] == Reagent_SMILES].values[0]
 
             if '.' in Reaction_database['Reagent SMILES'].iloc[i[0]]:
                 Products_SMILES = [i for i in Reaction_database['Reagent SMILES'].iloc[i[0]].split('.')]
+                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Reagent SMILES'].iloc[i[0]].split('.')))]
             else:
                 Products_SMILES = [Reaction_database['Reagent SMILES'].iloc[i[0]]]
+                Products_distr = [numpy.zeros((iterations, boxes))]
             D_products = []
             Diff_products = []
             for it in enumerate(Diffusion_constant(Reaction_database, Database)[0]):
@@ -197,44 +206,23 @@ for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'elect
                         Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
 
 
-            if '.' in Reaction_database['Reagent SMILES'].iloc[i[0]]:
-                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Reagent SMILES'].iloc[i[0]].split('.')))]
-            else:
-                Products_distr = [numpy.zeros((iterations, boxes))]
+        for i1 in range(iterations):
+            for i2 in range(1, boxes-1):
+                if i1 != 0:
+                    Reagent_distr[i1, i2] = Reagent_distr[i1-1, i2] + D_reagent*(Reagent_distr[i1-1, i2+1] - 2*Reagent_distr[i1-1, i2] + Reagent_distr[i1-1, i2-1])
+                    for k1 in enumerate(Products_distr):
+                        k1[1][i1, i2] = k1[1][i1-1, i2] + D_products[k1[0]]*(k1[1][i1-1, i2+1] - 2*k1[1][i1-1, i2] + k1[1][i1-1, i2-1])
 
+            if len(Products_SMILES) > 1 and i1 != 0:
+                Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1])/(1 + kf[i1]*dX/Diff_reagent)
+            elif len(Products_SMILES) == 1 and i1 != 0:
+                Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1] - kb[i1]*Products_distr[0][i1, 1])/(1 + kf[i1]*dX/Diff_reagent + kb[i1]*dX/Diff_products[0])
 
-
-
-
-
-
-
-
-
-
-
-
-
-            for i1 in range(iterations):
-                for i2 in range(1, boxes-1):
-                    if i1 != 0:
-                        Reagent_distr[i1, i2] = Reagent_distr[i1-1, i2] + D_reagent*(Reagent_distr[i1-1, i2+1] - 2*Reagent_distr[i1-1, i2] + Reagent_distr[i1-1, i2-1])
-
-                for i2 in range(1, boxes-1):
-                    if i1 != 0:
-                        for k1 in enumerate(Products_distr):
-                            k1[1][i1, i2] = k1[1][i1-1, i2] + D_products[k1[0]]*(k1[1][i1-1, i2+1] - 2*k1[1][i1-1, i2] + k1[1][i1-1, i2-1])
-
-                if len(Products_SMILES) > 1:
-                    Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1])/(1 + kf[i1]*dX/Diff_reagent)
-                else:
-                    Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1]-kb[i1]*Products_distr[0][i1, 1])/(1 + kf[i1]*dX/Diff_reagent + kb[i1]*dX/Diff_products[0])
-
-                Product_flux[i1] = -Reagent_flux[i1]
-                Reagent_distr[i1, 0] = Reagent_distr[i1, 1] + Reagent_flux[i1]*dX/Diff_reagent
-                for k1 in enumerate(Products_distr):
-                    k1[1][i1, 0] = k1[1][i1, 1] + Product_flux[i1]*dX/Diff_products[k1[0]]
-                Current_density[i1] = faraday*1000*Reagent_flux[i1]
+            Product_flux[i1] = -Reagent_flux[i1]
+            Reagent_distr[i1, 0] = Reagent_distr[i1, 1] + Reagent_flux[i1]*dX/Diff_reagent
+            for k1 in enumerate(Products_distr):
+                k1[1][i1, 0] = k1[1][i1, 1] + Product_flux[i1]*dX/Diff_products[k1[0]]
+            Current_density[i1] = faraday*1000*Reagent_flux[i1]
 
 
         Reagent_database = pandas.DataFrame(Reagent_distr, columns=distance)
@@ -251,66 +239,86 @@ for i in enumerate(Reaction_database.loc[Reaction_database['Reaction'] == 'elect
 
 
     else:
-        if '.' in Reaction_database['Product SMILES'].iloc[i[0]-1]:
+        CHARGE = (Reaction_database['Reagent charge'].iloc[i[0]] + Reaction_database['Product charge'].iloc[i[0]])
+        if Reaction_database['Reagent charge'].iloc[i[0]] > CHARGE and '.' in Reaction_database['Product SMILES'].iloc[i[0]-1]:
             SMILES = Reaction_database['Product SMILES'].iloc[i[0]-1].split('.')
-        else:
+        elif Reaction_database['Reagent charge'].iloc[i[0]] > CHARGE and '.' not in Reaction_database['Product SMILES'].iloc[i[0]-1]:
             SMILES = Reaction_database['Product SMILES'].iloc[i[0]-1]
 
-        if Reaction_database['Reagent SMILES'].iloc[i[0]] in SMILES:
+        elif Reaction_database['Reagent charge'].iloc[i[0]] <= CHARGE and '.' in Reaction_database['Reagent SMILES'].iloc[i[0]-1]:
+            SMILES = Reaction_database['Reagent SMILES'].iloc[i[0]-1].split('.')
+        elif Reaction_database['Reagent charge'].iloc[i[0]] <= CHARGE and '.' not in Reaction_database['Reagent SMILES'].iloc[i[0]-1]:
+            SMILES = Reaction_database['Reagent SMILES'].iloc[i[0]-1]
+
+
+        if Reaction_database['Reagent charge'].iloc[i[0]] > CHARGE and Reaction_database['Reagent SMILES'].iloc[i[0]] in SMILES:
             Current_density = numpy.zeros(iterations)
             Reagent_flux = numpy.zeros(iterations)
             Product_flux = numpy.zeros(iterations)
             Reagent_distr = numpy.zeros((iterations, boxes))
 
 
-            if Reaction_database['Reduction potential, V'].iloc[i[0]] < 0:
-                Reagent_SMILES = str(Reaction_database['Reagent SMILES'].iloc[i[0]])
-                Diff_reagent = Database['Diffusion, cm2/s'].loc[Database['SMILES'] == Reagent_SMILES].values[0]
+            Reagent_SMILES = str(Reaction_database['Reagent SMILES'].iloc[i[0]])
+            Diff_reagent = Database['Diffusion, cm2/s'].loc[Database['SMILES'] == Reagent_SMILES].values[0]
 
-                if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
-                    Products_SMILES = [i for i in Reaction_database['Product SMILES'].iloc[i[0]].split('.')]
-                else:
-                    Products_SMILES = [Reaction_database['Product SMILES'].iloc[i[0]]]
-                D_products = []
-                Diff_products = []
-                for it in enumerate(Diffusion_constant(Reaction_database, Database)[0]):
-                    if it[1] == Reagent_SMILES:
-                        D_reagent = Diffusion_constant(Reaction_database, Database)[2][it[0]]
+            if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
+                Products_SMILES = [i for i in Reaction_database['Product SMILES'].iloc[i[0]].split('.')]
+                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Product SMILES'].iloc[i[0]].split('.')))]
+            else:
+                Products_SMILES = [Reaction_database['Product SMILES'].iloc[i[0]]]
+                Products_distr = [numpy.zeros((iterations, boxes))]
+            D_products = []
+            Diff_products = []
+            for it in enumerate(Diffusion_constant(Reaction_database, Database)[0]):
+                if it[1] == Reagent_SMILES:
+                    D_reagent = Diffusion_constant(Reaction_database, Database)[2][it[0]]
+                    Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
+
+                for l in Products_SMILES:
+                    if it[1] == l:
+                        D_products.append(Diffusion_constant(Reaction_database, Database)[2][it[0]])
                         Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
 
-                    for l in Products_SMILES:
-                        if it[1] == l:
-                            D_products.append(Diffusion_constant(Reaction_database, Database)[2][it[0]])
-                            Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
+        elif Reaction_database['Reagent charge'].iloc[i[0]] <= CHARGE and Reaction_database['Product SMILES'].iloc[i[0]] in SMILES:
+            Current_density = numpy.zeros(iterations)
+            Reagent_flux = numpy.zeros(iterations)
+            Product_flux = numpy.zeros(iterations)
+            Reagent_distr = numpy.zeros((iterations, boxes))
+            if '.' in Reaction_database['Reagent SMILES'].iloc[i[0]]:
+                Products_SMILES = [i for i in Reaction_database['Reagent SMILES'].iloc[i[0]].split('.')]
+                Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Reagent SMILES'].iloc[i[0]].split('.')))]
+            else:
+                Products_SMILES = [Reaction_database['Reagent SMILES'].iloc[i[0]]]
+                Products_distr = [numpy.zeros((iterations, boxes))]
+            D_products = []
+            Diff_products = []
+            for it in enumerate(Diffusion_constant(Reaction_database, Database)[0]):
+                if it[1] == Reagent_SMILES:
+                    D_reagent = Diffusion_constant(Reaction_database, Database)[2][it[0]]
+                    Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
 
+                for l in Products_SMILES:
+                    if it[1] == l:
+                        D_products.append(Diffusion_constant(Reaction_database, Database)[2][it[0]])
+                        Diff_products.append(Diffusion_constant(Reaction_database, Database)[1][it[0]])
 
-                if '.' in Reaction_database['Product SMILES'].iloc[i[0]]:
-                    Products_distr = [numpy.zeros((iterations, boxes)) for i in range(len(Reaction_database['Product SMILES'].iloc[i[0]].split('.')))]
-                else:
-                    Products_distr = [numpy.zeros((iterations, boxes))]
+            for i1 in range(iterations):
+                for i2 in range(1, boxes-1):
+                    if i1 != 0:
+                        Reagent_distr[i1, i2] = Reagent_distr[i1-1, i2] + D_reagent*(Reagent_distr[i1-1, i2+1] - 2*Reagent_distr[i1-1, i2] + Reagent_distr[i1-1, i2-1])
+                        for k1 in enumerate(Products_distr):
+                            k1[1][i1, i2] = k1[1][i1-1, i2] + D_products[k1[0]]*(k1[1][i1-1, i2+1] - 2*k1[1][i1-1, i2] + k1[1][i1-1, i2-1])
 
-                for i1 in range(iterations):
-                    Reagent_distr[i1, 0] = Reagent_distr[i1, 1] + (Reagent_flux[i1] + Product_fluxes[i[0]-1][i1])*dX/Diff_reagent
+                if len(Products_SMILES) > 1 and i1 != 0:
+                    Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1])/(1 + kf[i1]*dX/Diff_reagent)
+                elif len(Products_SMILES) == 1 and i1 != 0:
+                    Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1] - kb[i1]*Products_distr[0][i1, 1])/(1 + kf[i1]*dX/Diff_reagent + kb[i1]*dX/Diff_products[0])
 
-                    for i2 in range(1, boxes-1):
-                        if i1 != 0:
-                            Reagent_distr[i1, i2] = Reagent_distr[i1-1, i2] + D_reagent*(Reagent_distr[i1-1, i2+1] - 2*Reagent_distr[i1-1, i2] + Reagent_distr[i1-1, i2-1])
-
-                    if len(Products_SMILES) > 1:
-                        Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1])/(1 + kf[i1]*dX/Diff_reagent)
-                    else:
-                        Reagent_flux[i1] = -(kf[i1]*Reagent_distr[i1, 1]-kb[i1]*Products_distr[0][i1, 1])/(1 + kf[i1]*dX/Diff_reagent + kb[i1]*dX/Diff_products[0])
-                    Product_flux[i1] = -Reagent_flux[i1]
-                    Current_density[i1] = faraday*1000*Reagent_flux[i1]
-
-
-                    for k1 in enumerate(Products_distr):
-                        k1[1][i1, 0] = k1[1][i1, 1] + Product_flux[i1]*dX/Diff_products[k1[0]]
-                    for i2 in range(1, boxes-1):
-                        if i1 != 0:
-                            for k1 in enumerate(Products_distr):
-                                k1[1][i1, i2] = k1[1][i1-1, i2] + D_products[k1[0]]*(k1[1][i1-1, i2+1] - 2*k1[1][i1-1, i2] + k1[1][i1-1, i2-1])
-
+                Product_flux[i1] = -Reagent_flux[i1]
+                Reagent_distr[i1, 0] = Reagent_distr[i1, 1] + (Reagent_flux[i1] + Product_fluxes[i[0]-1][i1])*dX/Diff_reagent
+                for k1 in enumerate(Products_distr):
+                    k1[1][i1, 0] = k1[1][i1, 1] + Product_flux[i1]*dX/Diff_products[k1[0]]
+                Current_density[i1] = faraday*1000*Reagent_flux[i1]
 
 
             Reagent_database = pandas.DataFrame(Reagent_distr, columns=distance)
